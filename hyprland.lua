@@ -53,7 +53,7 @@ hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CU
 hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE DISPLAY DBUS_SESSION_BUS_ADDRESS")
 hl.exec_cmd("awww-daemon")
 hl.exec_cmd("systemctl --user restart quickshell")
-hl.exec_cmd("echo '1' > '/sys/module/snd_hda_intel/parameters/power_save'")
+ hl.exec_cmd("echo '1' > '/sys/module/snd_hda_intel/parameters/power_save'")
 
 
 -------------------------------
@@ -121,7 +121,7 @@ hl.config({
 
         -- Change transparency of focused and unfocused windows
         active_opacity   = 1,
-        inactive_opacity = 0.95,
+        inactive_opacity = 1,
 
         shadow = {
             enabled      = true,
@@ -348,16 +348,23 @@ hl.bind("switch:off:Lid Switch", function()
 hl.monitor({ output = 'eDP-2', disabled = false })
 end, { locked = true })
 
+-- Brightness Controls
+
 hl.bind("XF86MonBrightnessUp", function()
 hl.exec_cmd("brightnessctl set +5%") end)
 hl.bind("XF86MonBrightnessDown", function()
 hl.exec_cmd("brightnessctl set 5%-") end)
 
-hl.bind(mainMod .. " + L", function()
-    hl.exec_cmd("hyprlock") end)
+-- Notification Toggle
 
 hl.bind(mainMod .. " + N", function()
-    hl.exec_cmd("qs ipc call notifications toggle") end)
+    hl.exec_cmd("qs -c /home/skittish/.config/hypr/quickshell ipc call notifications toggle") end)
+
+-- Screenshots with HyprQuickFrame
+hl.bind(mainMod .. " + ALT + S", function()
+    hl.exec_cmd("quickshell -c HyprQuickFrame -n") end)
+hl.bind(mainMod .. " + SHIFT + ALT + S", function()
+    hl.exec_cmd("env HQF_ACTION=temp quickshell -c HyprQuickFrame -n") end)
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
