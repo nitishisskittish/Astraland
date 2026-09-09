@@ -112,8 +112,9 @@ PanelWindow {
             }
         }
     }
-
+    
     Timer {
+        //Battery Updates
         interval: 10000
         running: true
         repeat: true
@@ -121,6 +122,7 @@ PanelWindow {
     }
 
     Timer {
+        //Cpu Usage Updates
         interval: 2000
         running: true
         repeat: true
@@ -147,7 +149,7 @@ PanelWindow {
                 property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
                 property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
                 text: index + 1
-                color: isActive ? Global.colors.cyan : (ws ? Global.colors.blue : Global.colors.muted)
+                color: isActive ? "#00ff66" : (ws ? '#957fca' : Global.colors.muted)
                 font {
                     pixelSize: Global.bar.fontSize
                     bold: true
@@ -251,7 +253,15 @@ PanelWindow {
         Text {
             id: clock
             text: Qt.formatDateTime(new Date(), "hh:mm ap")
+            
+            Component.onCompleted: {
+                //Ensures clock_updater syncs up to actual time flow
+                clock_updater.interval = 60000 - new Date().getSeconds() * 1000
+                clock_updater.start()
+            }
+
             Timer {
+                id: clock_updater
                 interval: 60000
                 running: true
                 repeat: true

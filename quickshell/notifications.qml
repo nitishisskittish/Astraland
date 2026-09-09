@@ -100,7 +100,7 @@ Scope {
                                     .pixelSize : Global.bar.fontSize
                                 color : Global
                                     .colors
-                                    .cyan
+                                    .green
                                     font
                                     .bold : true
                                 elide : Text.ElideRight
@@ -188,7 +188,7 @@ Scope {
                         text : history.count > 0 ? "Notifications" : "No Notifications"
                         color : Global
                             .colors
-                            .cyan
+                            .green
                             font
                             .family : Global
                             .bar

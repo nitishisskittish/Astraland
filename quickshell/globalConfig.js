@@ -3,11 +3,10 @@ const colors = {
     bg_dark: "#16161e",
     fg: "#a9b1d6",
     muted: "#444b6a",
-    cyan: "#0db9d7",
-    purple: "#ad8ee6",
+    green: "#00ff66",
+    purple: "#a855f7",
     red: "#f7768e",
-    yellow: "#e0af68",
-    blue: "#7aa2f7",
+    yellow: "#e6c875",
 }
 
 const bar = {
