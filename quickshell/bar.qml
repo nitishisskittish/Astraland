@@ -10,7 +10,6 @@ import "globalConfig.js" as Global
 PanelWindow {
     id: root
     screen: Quickshell.screens[2]
-
     property int cpuUsage: 0
     property int memUsage: 0
     property var lastCpuIdle: 0
@@ -18,28 +17,39 @@ PanelWindow {
     property var battery: 0
     property int brightness: 0
     property bool batteryWarning: false
-
     anchors.top: true
     anchors.left: true
     anchors.right: true
     implicitHeight: Global.bar.height
     color: "#1a1b26"
-
     FileView {
         id: statFile
         path: "/proc/stat"
     }
-
     FileView {
         id: memFile
         path: "/proc/meminfo"
     }
-
     FileView {
         id: batFile
         path: "/sys/class/power_supply/BAT0/capacity"
     }
-
+    FileView {
+        id: brightnessFile
+        path: "/sys/class/backlight/" + "amdgpu_bl1" + "/brightness"
+        watchChanges: true
+        onFileChanged: reload()
+        onTextChanged: {
+            var cur = parseInt(text());
+            var max = parseInt(maxBrightnessFile.text());
+            if (max > 0)
+                root.brightness = Math.round(100 * cur / max);
+        }
+    }
+    FileView {
+        id: maxBrightnessFile
+        path: "/sys/class/backlight/" + "amdgpu_bl1" + "/max_brightness"
+    }
     function updateCpu() {
         statFile.reload();
         var line = statFile.text().split("\n")[0];
@@ -52,7 +62,6 @@ PanelWindow {
         lastCpuTotal = total;
         lastCpuIdle = idle;
     }
-
     function updateMem() {
         memFile.reload();
         var lines = memFile.text().split("\n");
@@ -61,12 +70,13 @@ PanelWindow {
             var m = lines[i].match(/^(\w+):\s+(\d+)/);
             if (m)
                 vals[m[1]] = parseInt(m[2]);
+            if (vals["MemTotal"] !== undefined && vals["MemAvailable"] !== undefined)
+                break;
         }
         var total = vals["MemTotal"] || 1;
         var avail = vals["MemAvailable"] || 0;
         memUsage = Math.round(100 * (total - avail) / total);
     }
-
     function updateBattery() {
         batFile.reload();
         var val = parseInt(batFile.text().trim());
@@ -79,50 +89,18 @@ PanelWindow {
             batteryWarning = true;
         }
     }
-
     Process {
         id: notifyProc
         command: ["notify-send", "Battery Warning", "Battery below 15%"]
     }
 
-    Process {
-        id: brightnessMonitor
-        command: ["brightnessctl", "monitor"]
-        running: true
-
-        onRunningChanged: {
-            if (!running)
-                running = true;
-        }
-
-        stdout: SplitParser {
-            onRead: data => {
-                brightnessProc.running = true;
-            }
-        }
-    }
-
-    Process {
-        id: brightnessProc
-        command: ["sh", "-c", "brightnessctl -m | cut -d, -f4 | tr -d '%'"]
-        stdout: SplitParser {
-            onRead: data => {
-                if (data)
-                    root.brightness = parseInt(data.trim());
-            }
-        }
-    }
-    
-    Timer {
-        //Battery Updates
+    Timer { // Battery Updates
         interval: 10000
         running: true
         repeat: true
         onTriggered: updateBattery()
     }
-
-    Timer {
-        //Cpu Usage Updates
+    Timer { // Cpu Usage Updates
         interval: 2000
         running: true
         repeat: true
@@ -131,20 +109,16 @@ PanelWindow {
             updateMem();
         }
     }
-
     Component.onCompleted: {
         updateCpu();
         updateMem();
         updateBattery();
     }
-
     RowLayout {
         anchors.fill: parent
         anchors.margins: 4
-
         Repeater {
             model: 9
-
             Text {
                 property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
                 property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
@@ -154,20 +128,17 @@ PanelWindow {
                     pixelSize: Global.bar.fontSize
                     bold: true
                 }
-
                 MouseArea {
                     anchors.fill: parent
                     onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${index + 1} })`)
                 }
             }
         }
-
         Item {
             Layout.fillWidth: true
         }
-
         Text {
-            text: " " + cpuUsage + "%"     // CPU
+            text: " " + cpuUsage + "%" // CPU
             color: Global.colors.yellow
             font {
                 family: Global.bar.fontFamily
@@ -175,13 +146,11 @@ PanelWindow {
                 bold: true
             }
         }
-
         Rectangle {
             width: 1
             height: 16
             color: Global.colors.muted
         }
-
         Text {
             text: ":" + memUsage + "%"
             color: Global.colors.yellow
@@ -191,13 +160,11 @@ PanelWindow {
                 bold: true
             }
         }
-
         Rectangle {
             width: 1
             height: 16
             color: Global.colors.muted
         }
-
         Text {
             PwObjectTracker {
                 objects: [Pipewire.defaultAudioSink]
@@ -211,13 +178,11 @@ PanelWindow {
                 bold: true
             }
         }
-
         Rectangle {
             width: 1
             height: 16
             color: Global.colors.muted
         }
-
         Text {
             text: (root.brightness <= 33 ? "󰃞 " : root.brightness <= 66 ? "󰃟 " : "󰃠 ") + root.brightness + "%"
             color: Global.colors.yellow
@@ -225,6 +190,9 @@ PanelWindow {
                 family: Global.bar.fontFamily
                 pixelSize: Global.bar.fontSize
                 bold: true
+            }
+            Component.onCompleted: {
+                brightnessFile.running = true;
             }
         }
 
@@ -243,23 +211,18 @@ PanelWindow {
                 bold: true
             }
         }
-
         Rectangle {
             width: 1
             height: 16
             color: Global.colors.muted
         }
-
         Text {
             id: clock
             text: Qt.formatDateTime(new Date(), "hh:mm ap")
-            
-            Component.onCompleted: {
-                //Ensures clock_updater syncs up to actual time flow
-                clock_updater.interval = 60000 - new Date().getSeconds() * 1000
-                clock_updater.start()
+            Component.onCompleted: { // Ensures clock_updater syncs up to actual time flow
+                clock_updater.interval = 60000 - new Date().getSeconds() * 1000;
+                clock_updater.start();
             }
-
             Timer {
                 id: clock_updater
                 interval: 60000
@@ -267,7 +230,6 @@ PanelWindow {
                 repeat: true
                 onTriggered: clock.text = Qt.formatDateTime(new Date(), "hh:mm ap")
             }
-
             color: Global.colors.yellow
             font {
                 family: Global.bar.fontFamily
