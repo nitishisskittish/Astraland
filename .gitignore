@@ -2,3 +2,5 @@ monitors.lua
 *.conf.bak
 *.conf
 *lua.bak
+*.gen
+colors.lua

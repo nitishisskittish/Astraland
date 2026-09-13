@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
 import Quickshell.Services.Pipewire
-import "globalConfig.js" as Global
+import "."
 
 PanelWindow {
     id: root
@@ -20,8 +20,11 @@ PanelWindow {
     anchors.top: true
     anchors.left: true
     anchors.right: true
-    implicitHeight: Global.bar.height
-    color: "#1a1b26"
+    implicitHeight: 35
+    color: Colors.colors.bg
+    property string fontFamily: "JetBrainsMono Nerd Font"
+    property int fontSize: 16
+
     FileView {
         id: statFile
         path: "/proc/stat"
@@ -49,6 +52,7 @@ PanelWindow {
     FileView {
         id: maxBrightnessFile
         path: "/sys/class/backlight/" + "amdgpu_bl1" + "/max_brightness"
+        preload: true
     }
     function updateCpu() {
         statFile.reload();
@@ -123,9 +127,9 @@ PanelWindow {
                 property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
                 property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
                 text: index + 1
-                color: isActive ? "#00ff66" : (ws ? '#957fca' : Global.colors.muted)
+                color: isActive ? Colors.colors.highlight1 : (ws ? Colors.colors.highlight2 : Colors.colors.muted)
                 font {
-                    pixelSize: Global.bar.fontSize
+                    pixelSize: fontSize
                     bold: true
                 }
                 MouseArea {
@@ -138,32 +142,49 @@ PanelWindow {
             Layout.fillWidth: true
         }
         Text {
-            text: " " + cpuUsage + "%" // CPU
-            color: Global.colors.yellow
+            PwObjectTracker {
+                objects: [Pipewire.defaultAudioSource]
+            }
+            text: (Pipewire.defaultAudioSource.audio.muted ? "" : "")
+            color: Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
             }
         }
         Rectangle {
             width: 1
             height: 16
-            color: Global.colors.muted
+            color: Colors.colors.muted
+        }
+        Text {
+            text: " " + cpuUsage + "%" // CPU
+            color: Colors.colors.stat_color
+            font {
+                family: fontFamily
+                pixelSize: fontSize
+                bold: true
+            }
+        }
+        Rectangle {
+            width: 1
+            height: 16
+            color: Colors.colors.muted
         }
         Text {
             text: ":" + memUsage + "%"
-            color: Global.colors.yellow
+            color: Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
             }
         }
         Rectangle {
             width: 1
             height: 16
-            color: Global.colors.muted
+            color: Colors.colors.muted
         }
         Text {
             PwObjectTracker {
@@ -171,54 +192,51 @@ PanelWindow {
             }
             property int volume: Math.round(Pipewire.defaultAudioSink.audio.volume * 100)
             text: (Pipewire.defaultAudioSink.audio.muted ? "󰖁 " : volume > 65 ? "󰕾 " : volume > 35 ? "󰖀 " : "󰕿 ") + volume + "%"
-            color: Global.colors.yellow
+            color: Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
             }
         }
         Rectangle {
             width: 1
             height: 16
-            color: Global.colors.muted
+            color: Colors.colors.muted
         }
         Text {
             text: (root.brightness <= 33 ? "󰃞 " : root.brightness <= 66 ? "󰃟 " : "󰃠 ") + root.brightness + "%"
-            color: Global.colors.yellow
+            color: Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
-            }
-            Component.onCompleted: {
-                brightnessFile.running = true;
             }
         }
 
         Rectangle {
             width: 1
             height: 16
-            color: Global.colors.muted
+            color: Colors.colors.muted
         }
 
         Text {
             text: (battery >= 80 ? "+" : battery >= 60 ? " " : battery >= 40 ? " " : battery >= 15 ? " " : " ") + battery + "%"
-            color: battery < 15 ? Global.colors.red : Global.colors.yellow
+            color: battery < 15 ? Colors.colors.red : Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
             }
         }
         Rectangle {
             width: 1
             height: 16
-            color: Global.colors.muted
+            color: Colors.colors.muted
         }
         Text {
             id: clock
-            text: Qt.formatDateTime(new Date(), "hh:mm ap")
+            text: Qt.formatDateTime(new Date(), "hh:mm AP")
             Component.onCompleted: { // Ensures clock_updater syncs up to actual time flow
                 clock_updater.interval = 60000 - new Date().getSeconds() * 1000;
                 clock_updater.start();
@@ -228,12 +246,12 @@ PanelWindow {
                 interval: 60000
                 running: true
                 repeat: true
-                onTriggered: clock.text = Qt.formatDateTime(new Date(), "hh:mm ap")
+                onTriggered: clock.text = Qt.formatDateTime(new Date(), "hh:mm AP")
             }
-            color: Global.colors.yellow
+            color: Colors.colors.stat_color
             font {
-                family: Global.bar.fontFamily
-                pixelSize: Global.bar.fontSize
+                family: fontFamily
+                pixelSize: fontSize
                 bold: true
             }
         }
