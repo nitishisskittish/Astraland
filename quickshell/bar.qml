@@ -15,8 +15,10 @@ PanelWindow {
     property var lastCpuIdle: 0
     property var lastCpuTotal: 0
     property var battery: 0
-    property int brightness: 0
     property bool batteryWarning: false
+    property int brightnessRaw: parseInt(brightnessFile.text()) || 0
+    property int maxBrightnessRaw: parseInt(maxBrightnessFile.text()) || 1
+    property int brightness: maxBrightnessRaw > 0 ? Math.round(100 * brightnessRaw / maxBrightnessRaw) : 0
     anchors.top: true
     anchors.left: true
     anchors.right: true
@@ -39,21 +41,13 @@ PanelWindow {
     }
     FileView {
         id: brightnessFile
-        path: "/sys/class/backlight/" + "amdgpu_bl1" + "/brightness"
         watchChanges: true
         onFileChanged: reload()
-        onTextChanged: {
-            var cur = parseInt(text());
-            var max = parseInt(maxBrightnessFile.text());
-            if (max > 0)
-                root.brightness = Math.round(100 * cur / max);
-        }
     }
     FileView {
         id: maxBrightnessFile
-        path: "/sys/class/backlight/" + "amdgpu_bl1" + "/max_brightness"
-        preload: true
     }
+
     function updateCpu() {
         statFile.reload();
         var line = statFile.text().split("\n")[0];
@@ -97,7 +91,20 @@ PanelWindow {
         id: notifyProc
         command: ["notify-send", "Battery Warning", "Battery below 15%"]
     }
-
+    Process {
+        id: backlightDetector
+        command: ["sh", "-c", "ls /sys/class/backlight/ | grep amdgpu | head -n1"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var name = text.trim();
+                if (name) {
+                    brightnessFile.path = "/sys/class/backlight/" + name + "/brightness";
+                    maxBrightnessFile.path = "/sys/class/backlight/" + name + "/max_brightness";
+                }
+            }
+        }
+    }
     Timer { // Battery Updates
         interval: 10000
         running: true
